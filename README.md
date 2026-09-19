@@ -1,120 +1,126 @@
 # Jev Live
 
-カメラに向かって喋ると、その内容に合わせて、バラエティ番組のテロップと漫画の効果が勝手に入ります。
+English | [日本語](README.ja.md)
 
-- 「ドン!」「ざわ…ざわ…」「ガーン」などの擬音と、集中線やフラッシュ、SE
-- オチの発話そのものを出す、縁取りつきの強調テロップ
-- いつも掛かっているサングラス。話のムードが続くと、レンズの色が変わり、雨が降り、映像が歪み、声色が変わる
+Talk to your camera, and Japanese variety-show captions and manga effects appear on their own, matched to what you are saying.
 
-何をいつ出すかは [Jev](https://typesafe.ai/blog/introducing-system-one-models-and-jev) だけで決めています。
-Jev は文章を作らず、型つきの問いに確率で答えるモデルです。
-画面と音に出るものは、すべて閉集合から選びます。
+- Sound-effect words such as 「ドン!」 (*don!*, impact), 「ざわ…ざわ…」 (*zawa zawa*, uneasy murmur) and 「ガーン」 (*gaan*, shock), with speed lines, flashes and sound effects
+- Your punchline itself, shown as a big outlined caption
+- Sunglasses that are always on. When a mood settles in, the lenses change color, rain falls, the picture warps and your voice changes
 
-## 動かす
+What appears, and when, is decided by [Jev](https://typesafe.ai/blog/introducing-system-one-models-and-jev) alone.
+Jev does not write text. It answers typed questions with probabilities.
+Everything shown or played is picked from a closed set.
 
-macOS 26 以降、Xcode 26、Node.js 20 以降、Chrome、[TypeSafe](https://console.typesafe.ai/) の API キーが要ります。
-npm の依存パッケージはありません。
-効果音がマイクに回り込まないよう、ヘッドホンを使ってください。
+## Run it
+
+You need macOS 26 or later, Xcode 26, Node.js 20 or later, Chrome, and a [TypeSafe](https://console.typesafe.ai/) API key.
+There are no npm dependencies.
+Wear headphones so the sound effects do not leak back into the microphone.
 
 ```sh
-npm run build:stt                 # 音声認識をビルドする（初回だけ）
+npm run build:stt                 # build the speech recognizer (first time only)
 TYPESAFE_API_KEY=... npm start    # http://localhost:8054
 ```
 
-ページを開いてステージをクリックすると、カメラとマイクの許可を求めます。
-キーはサーバーの中にとどまり、ブラウザには渡りません。
+Open the page and click the stage. It asks for camera and microphone access.
+The key stays inside the server and never reaches the browser.
 
-キーもカメラも無くても、パネルのボタンで全部の演出を手動で出せます。
+Without a key or a camera, you can still fire every effect by hand from the buttons in the panel.
 
 ```sh
-node server.js --no-stt                          # 音声認識なし。入力欄から文字で話す
-STT_CMD="node sim/fake-stt.js promo" npm start   # 1 分の台本を流す。喋らずに通しを見る
-npm run fetch:vendor                             # 顔認識のファイルを手元に落とす（ネットの無い現場用）
+node server.js --no-stt                          # no speech recognition; type into the input box instead
+STT_CMD="node sim/fake-stt.js promo" npm start   # play a one-minute script, so you can watch a full run without talking
+npm run fetch:vendor                             # download the face-tracking files (for venues with no network)
 ```
 
-| URL の指定 | 効果 |
+| URL parameter | Effect |
 |---|---|
-| `?stage=1` | ステージだけを画面いっぱいに出す（`P` キーでも切り替わる） |
-| `?scale=1.5` | ステージを 1920x1080 で描く |
-| `?mirror=0` / `?shades=0` | 左右を反転しない / サングラスを常には掛けない |
-| `?still=1` | 動きを減らす |
-| `?camera=<画像の URL>` | カメラの代わりに静止画を流す |
+| `?stage=1` | Show only the stage, full screen (the `P` key toggles it too) |
+| `?scale=1.5` | Draw the stage at 1920x1080 |
+| `?mirror=0` / `?shades=0` | Do not mirror the picture / do not keep the sunglasses on |
+| `?still=1` | Reduce motion |
+| `?camera=<image URL>` | Feed a still image instead of the camera |
 
-ステージの下の「● 録画」（`R` キー）で、映像と音を 1 本の mp4 にして保存できます。
-映す範囲は、ブラウザのウィンドウごと、タブ、ステージだけ、から選べます。
-音は、効果音とマイクの声をアプリの中で混ぜたものが入ります。
+The "● 録画" (record) button under the stage, or the `R` key, saves picture and sound as one mp4.
+You can record the whole browser window, the tab, or the stage alone.
+The sound is the effects and your microphone, mixed inside the app.
 
-## しくみ
+The interface and the captions are in Japanese, and the speech recognizer is set to Japanese.
+
+## How it works
 
 ```
-音声認識（Swift）→ 字幕 → scheduler（いつ聞くか）→ Jev（30 問を 1 リクエスト）
-  → director（出すか、抑えるか）→ 演出イベント → ステージ（映像）と音
+speech recognition (Swift) → transcript → scheduler (when to ask) → Jev (30 questions in one request)
+  → director (show it, or hold it back) → effect events → stage (picture) and sound
 ```
 
-Jev に送るのは、字幕と、30 個の型つきの問いです。
+Jev receives the transcript and 30 typed questions.
 
-| 問い | 型 | 何を決めるか |
+| Question | Type | What it decides |
 |---|---|---|
-| どの演出が合うか | choice | 擬音と画面効果と SE の束（15 種と「なし」） |
-| どのムードが続いているか | choice | レンズの色と顔と画面と声の束（8 種と「なし」） |
-| 演出ごと、ムードごとに、いま出すか | noul × 23 | choice の答えの裏づけ |
-| いまオチを言ったか、言い切ったか、材料が乏しいか | noul × 3 | 発話テロップを出すか |
-| 発話テロップの様式 | choice | 書体と色と動き（8 種） |
-| 熱量 | score | 文字の大きさ、揺れ、音量、擬音の強さ（ドン、ドン!、ドドン!!） |
+| Which effect fits | choice | A bundle of sound-effect word, screen effect and sound (15 kinds, or none) |
+| Which mood has settled in | choice | A bundle of lens color, face, screen and voice effects (8 kinds, or none) |
+| For each effect and each mood: show it now? | noul × 23 | Backing for the choice answers |
+| Was that a punchline? Is the sentence finished? Is there too little to judge? | noul × 3 | Whether to show the spoken-line caption |
+| Caption style | choice | Typeface, color and motion (8 kinds) |
+| Heat | score | Text size, shake, volume, and how strong the word is (ドン, ドン!, ドドン!!) |
 
-設計で決めたこと。
+A noul is a yes/no question answered as a probability.
 
-- **束で選ぶ。** Jev は問いを独立に評価するので、擬音と効果音と画面効果を別々に選ばせると、「ガーン」に笑い声が付く。組み合わせは表で決めておく
-- **choice と noul の両方で聞く。** choice は総和が 1 なので、何も合わない場面でもどれかに寄る。絶対評価の noul が低ければ、choice で勝っていても出さない
-- **判定の対象は 1 つの発話に絞る。** 確定した行と話している途中の字幕を並べて渡すと、前の行のオチを次の発話のものと取り違える
-- **出しすぎを抑えるのはコード。** Jev は「いま何が合うか」を答えるだけ。1 発話に 1 回、同じ擬音は 8 秒あける、といった決まりは `director` が持つ。前回の答えは Jev に送らない（自分の答えに引きずられる）
-- **確定を待たない。** Apple の音声認識は、言い終わってから確定を返すまでに 3 秒ほどかかる。字幕が止まって、言い切ったと Jev が答えた時点で出す
-- **喋れば必ず何か出す。** 合う擬音が無い発話は、その言葉をテロップにする。どの効果も 3 秒まで
+Design decisions.
 
-字幕から演出イベントまで（`src/pipeline.js`）は DOM に触れません。
-画面も、実 API での通し検証も、同じ経路を通ります。
+- **Pick bundles.** Jev evaluates each question independently. Ask for the word, the sound and the screen effect separately, and you get 「ガーン」 with a laugh track. The combinations are fixed in a table
+- **Ask with both choice and noul.** A choice sums to 1, so it leans toward something even when nothing fits. If the noul, which is an absolute judgment, is low, the effect is held back even if it won the choice
+- **Judge one utterance at a time.** Hand over the finished line and the line still being spoken side by side, and the punchline of the first gets credited to the second
+- **Code is what holds effects back.** Jev only answers what fits right now. Rules such as once per utterance, or 8 seconds before the same word again, live in the `director`. Earlier answers are never sent back to Jev, because it gets pulled toward its own answers
+- **Do not wait for the final transcript.** Apple's recognizer takes about 3 seconds after you stop talking to finalize. Effects fire when the transcript stops moving and Jev says the sentence is finished
+- **If you speak, something appears.** An utterance with no fitting word gets its own words as a caption. No effect lasts more than 3 seconds
 
-## 検証
+The path from transcript to effect events (`src/pipeline.js`) never touches the DOM.
+The page and the live-API test run go through the same code.
+
+## Verification
 
 ```sh
 npm test                                  # node:test
-npm run probe                             # 実 API。聞き方の下調べ
-npm run sim -- --script promo --pace 6.5  # 実 API。台本を人の話速で流して、演出イベントまで通す
-node sim/replay.js logs/live.jsonl        # 録った答えを、いまの director に流し直す（API は呼ばない）
+npm run probe                             # live API: how to phrase the questions
+npm run sim -- --script promo --pace 6.5  # live API: play a script at speaking pace, through to effect events
+node sim/replay.js logs/live.jsonl        # replay recorded answers through the current director (no API calls)
 ```
 
-実測（2026-09-19、Apple M5、`jev-1.13.0`）。
+Measured on 2026-09-19, Apple M5, `jev-1.13.0`.
 
-| 項目 | 結果 |
+| Item | Result |
 |---|---|
-| 応答時間 | 中央値 250 ms（30 問を 1 リクエスト） |
-| 費用 | 1 回 約 $0.00011。喋り続けて 1 時間で $0.5 前後 |
-| ふつうの話 8 行 | すべて「なし」が勝ち、誤って出た擬音は 0 |
-| 台本 12 行 | 期待した擬音が上位 3 つに入ったのは 10/10 |
-| オチ判定 | ふつうの話は 0.05 以下、オチの行は 0.52〜0.88 |
-| 言い切ってから演出まで | 中央値 0.68 秒（偽の音声認識での値） |
+| Response time | 250 ms median (30 questions in one request) |
+| Cost | About $0.00011 per request. Around $0.5 for an hour of nonstop talking |
+| 8 lines of ordinary talk | "None" won every time. No word fired by mistake |
+| 12 scripted lines | The expected word was in the top 3 for 10 of 10 |
+| Punchline score | 0.05 or lower for ordinary talk, 0.52 to 0.88 for punchlines |
+| From end of sentence to effect | 0.68 s median (with the fake speech recognizer) |
 
-まだ確かめていないこと。
+Not verified yet.
 
-- 音を耳で聞いていない。効果音の音量は数値でそろえただけ。笑い声は合成では質が出ないので、`assets/se/laugh.mp3` を置くことを勧める（`assets/se/<id>.mp3` があれば、合成より優先する）
-- 保存した録画の再生と、ウィンドウを選んで録る流れ
-- 実際のカメラでの顔の追跡、OBS への取り込み
+- Nobody has listened to the sound. Effect volumes were matched by numbers only. Synthesized laughter does not sound good, so drop in `assets/se/laugh.mp3` (any `assets/se/<id>.mp3` takes priority over the synthesized sound)
+- Playing back a saved recording, and the flow of picking a window to record
+- Face tracking with a real camera, and capturing into OBS
 
-聞き方の細目、しきい値とその根拠、下調べで分かったこと、マイクと録画の注意は [docs/notes.md](docs/notes.md) にあります。
+Question wording, thresholds and the reasons for them, what the probing found, and notes on the microphone and recording are in [docs/notes.md](docs/notes.md) (Japanese).
 
-## ファイル
+## Files
 
 ```
-server.js      静的配信、Jev への中継、字幕の SSE、音声認識の起動
+server.js      static files, relay to Jev, transcript over SSE, starts the speech recognizer
 src/
-  effects.js   出せる演出の閉集合と束
-  ask.js  scheduler.js  director.js  pipeline.js   聞き方、聞く時、出すか抑えるか、その配線
-  stage/       映像の合成（Canvas 2D）、顔の追跡（MediaPipe）
-  audio/       効果音の合成と、声の加工（WebAudio）
-  recorder.js  録画
-sim/           台本、偽の音声認識、下調べ、通し検証
-stt/           音声認識（Swift、Apple SpeechAnalyzer）
+  effects.js   the closed set of effects, and the bundles
+  ask.js  scheduler.js  director.js  pipeline.js   how to ask, when to ask, show or hold back, and the wiring
+  stage/       picture compositing (Canvas 2D), face tracking (MediaPipe)
+  audio/       sound-effect synthesis and voice processing (WebAudio)
+  recorder.js  recording
+sim/           scripts, fake speech recognizer, probing, full test runs
+stt/           speech recognition (Swift, Apple SpeechAnalyzer)
 test/          node:test
 ```
 
-音声認識は[リアルタイム脳内メーカー](https://github.com/ponyo877/jev-realtime-brain-scanner)のものを使っています。
+The speech recognizer comes from [jev-realtime-brain-scanner](https://github.com/ponyo877/jev-realtime-brain-scanner).

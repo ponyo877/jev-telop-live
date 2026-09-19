@@ -1,0 +1,14 @@
+{
+  "name": "jev-telop-live",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "build:stt": "swift build -c release --package-path stt",
+    "fetch:vendor": "node scripts/fetch-vendor.js",
+    "test": "node --test",
+    "probe": "node sim/probe.js",
+    "sim": "node sim/live.js",
+    "sweep": "node sim/sweep.js"
+  }
+}

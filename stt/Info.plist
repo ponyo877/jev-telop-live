@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleIdentifier</key>
+  <string>com.ponyo877.jev-telop-live.stt</string>
+  <key>CFBundleName</key>
+  <string>stt</string>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>話している内容を文字にして、テロップと効果を出すためにマイクを使います。音声はこの Mac の中だけで処理します。</string>
+  <key>NSSpeechRecognitionUsageDescription</key>
+  <string>話している内容を文字にして、テロップと効果を出すために音声認識を使います。認識はこの Mac の中だけで行います。</string>
+</dict>
+</plist>

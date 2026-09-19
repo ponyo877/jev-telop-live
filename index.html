@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jev Live</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Potta+One&family=Reggae+One&display=swap">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="src/main.js"></script>
+</head>
+<body>
+  <div class="layout">
+    <main id="all">
+      <header id="title">
+        <h1>Jev Live</h1>
+        <dl id="status" aria-label="状態">
+          <div><dt>カメラ</dt><dd id="st-camera">未開始</dd></div>
+          <div><dt>マイク</dt><dd id="st-mic">未開始</dd></div>
+          <div><dt>顔</dt><dd id="st-face">未開始</dd></div>
+          <div><dt>音声認識</dt><dd id="stt-status">…</dd></div>
+          <div><dt>描画</dt><dd id="st-render">–</dd></div>
+        </dl>
+      </header>
+      <div id="stage-box">
+        <canvas id="stage" role="img" aria-label="カメラの映像に、擬音とテロップと画面効果を重ねたもの"></canvas>
+        <button type="button" id="start-overlay">クリックで開始</button>
+        <span id="rec-dot" hidden aria-hidden="true"></span>
+      </div>
+      <video id="camera" playsinline muted hidden></video>
+      <p id="announce" class="sr-only" aria-live="polite"></p>
+      <div id="hint">
+        <div id="rec-box">
+          <button type="button" id="rec" aria-pressed="false" title="録画を始める / 止める（R キー）">● 録画</button>
+          <select id="rec-surface" aria-label="録画に映す範囲" title="録画に映す範囲。ウィンドウかタブを選ぶと、ブラウザの選択画面が開きます">
+            <option value="window">ウィンドウ（枠とパネルも）</option>
+            <option value="tab">このタブ（パネルも）</option>
+            <option value="stage">ステージだけ</option>
+          </select>
+          <select id="rec-voice" aria-label="録画に入れる声" title="録画に入れる声。効果音はいつも入ります">
+            <option value="processed">声（声色の効果つき）</option>
+            <option value="raw">声（生のマイク）</option>
+            <option value="none">声なし</option>
+          </select>
+          <span id="rec-note" role="status"></span>
+        </div>
+        <label class="check"><input type="checkbox" id="mirror" checked> 左右を反転する（鏡のように映す）</label>
+      </div>
+    </main>
+
+    <aside id="panel" aria-label="字幕と判断の内訳">
+      <section id="captions" aria-labelledby="captions-title">
+        <h2 id="captions-title">字幕</h2>
+        <ol id="caption-lines" aria-live="off"></ol>
+        <form id="say-form" autocomplete="off">
+          <input id="say" type="text" maxlength="200" placeholder="マイクの代わりに文字で話す" aria-label="マイクの代わりに文字で話す">
+          <button type="submit">送る</button>
+          <button type="button" id="reset">消す</button>
+        </form>
+      </section>
+
+      <section>
+        <h2>◆ Jev の判断</h2>
+        <div id="cue-bars" class="bars"></div>
+        <div id="mood-bars" class="bars"></div>
+        <p class="line" id="moment">オチ – ／ 熱量 – ／ 材料の乏しさ –</p>
+        <p class="line alert" id="alert" role="status"></p>
+      </section>
+
+      <section>
+        <h2>◇ コードの事実</h2>
+        <dl id="facts" class="facts">
+          <div><dt>応答時間</dt><dd id="fact-latency">–</dd></div>
+          <div><dt>聞いた経路</dt><dd id="fact-source">–</dd></div>
+          <div><dt>問いの数</dt><dd id="fact-questions">–</dd></div>
+          <div><dt>呼び出し</dt><dd id="fact-calls">0 回</dd></div>
+          <div><dt>累計費用</dt><dd id="fact-cost">$0</dd></div>
+          <div><dt>この調子で 1 時間</dt><dd id="fact-hourly">–</dd></div>
+        </dl>
+      </section>
+
+      <section>
+        <h2>持続する効果</h2>
+        <p class="caption">いま有効なものが点く。押すと手動で切り替わる。</p>
+        <div id="chips"></div>
+      </section>
+
+      <section>
+        <h2>手動で出す</h2>
+        <div id="cue-buttons" class="buttons"></div>
+        <label class="row">熱量 <input type="range" id="heat" min="0" max="1" step="0.05" value="0.6"> <output id="heat-out">0.60</output></label>
+        <form id="telop-form" autocomplete="off">
+          <input id="telop-text" type="text" maxlength="60" value="いやなんでやねん" aria-label="発話テロップの文字">
+          <select id="telop-style" aria-label="様式"></select>
+          <button type="submit">テロップ</button>
+        </form>
+      </section>
+
+      <section>
+        <h2>音</h2>
+        <label class="row">マイク <select id="mic" title="声の加工と録画に使うマイク。音声認識は、これとは別に macOS の既定の入力を使います"><option value="">開始すると選べます</option></select></label>
+        <label class="row">SE の音量 <input type="range" id="se-volume" min="0" max="1" step="0.05" value="0.8"></label>
+        <label class="check"><input type="checkbox" id="monitor"> 加工した声を出力する（<strong>ヘッドホン必須</strong>）</label>
+        <p class="caption" id="monitor-note">スピーカーで出すと、マイクに回り込んでハウリングします。</p>
+        <label class="row">出力先 <select id="sink"><option value="">既定</option></select></label>
+        <div class="row">入力 <span id="mic-meter" class="meter"><i></i></span> <span id="voice-active" class="muted">–</span></div>
+      </section>
+
+      <details>
+        <summary>Jev に送った state</summary>
+        <pre id="seen">(まだ何も送っていません)</pre>
+      </details>
+    </aside>
+  </div>
+</body>
+</html>

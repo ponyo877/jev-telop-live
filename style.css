@@ -1,0 +1,252 @@
+/* 配色はここにだけ置く。ステージの中の色（擬音やテロップ）は配信に載る絵なので、src/stage/ のほうで別に持つ。 */
+:root {
+  --page: #f4f5f7;
+  --box: #ffffff;
+  --border: #cfd4da;
+  --ink: #1d2126;
+  --muted: #6b7280;
+  --accent: #e60033;
+  --on: #0a7d3c;
+  --alert: #c0392b;
+  --bar: #d9dee5;
+  --cue: #e60033;
+  --mood: #2f6fde;
+  --text: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic', 'Noto Sans JP', sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 16px;
+  background: var(--page);
+  color: var(--ink);
+  font: 12px/1.6 var(--text);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.layout {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+#all {
+  flex: 1 1 640px;
+  max-width: 1280px;
+  min-width: 0;
+  background: var(--box);
+  border: 1px solid var(--border);
+}
+
+#title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 18px;
+  background: var(--ink);
+  color: #ffffff;
+  padding: 8px 14px;
+}
+#title h1 { margin: 0; font-size: 16px; font-weight: bold; white-space: nowrap; }
+
+/* 状態。見出しの横に、文字だけを横に並べる。詳しい理由は title 属性に入れてあり、マウスを載せると出る。 */
+#status { display: flex; flex-wrap: wrap; gap: 2px 14px; margin: 0; font-size: 12px; min-width: 0; }
+#status div { display: flex; gap: 5px; white-space: nowrap; min-width: 0; }
+#status dt { opacity: 0.6; }
+#status dd { margin: 0; max-width: 14em; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+/* 暗い帯の上なので、パネルの緑と赤より明るい色にする。色だけに頼らないよう、よい状態は太字にもする */
+#status dd[data-state='ok'],
+#status dd[data-state='listening'] { color: #7ee2a8; font-weight: bold; }
+#status dd[data-state='error'],
+#status dd[data-state='missing'] { color: #ff9a8f; }
+
+#stage-box { position: relative; line-height: 0; background: #000000; }
+#stage { width: 100%; aspect-ratio: 16 / 9; display: block; }
+
+#start-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  border: 0;
+  background: rgba(0, 0, 0, 0.55);
+  color: #ffffff;
+  font: bold 22px var(--text);
+  cursor: pointer;
+}
+#start-overlay:hover { background: rgba(0, 0, 0, 0.45); }
+#start-overlay[hidden] { display: none; }
+
+#hint { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 16px; margin: 8px 14px 10px; color: var(--muted); }
+
+/* ---------- 録画 ---------- */
+
+#rec-box { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+#rec-box select { padding: 4px 6px; font-size: 12px; }
+#rec { font-weight: bold; color: var(--accent); font-variant-numeric: tabular-nums; }
+/* 録画中は、色だけでなく文言（■ 停止）と枠でも示す */
+#rec[aria-pressed='true'] { background: var(--accent); border-color: var(--accent); color: #ffffff; }
+#rec-note { font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+#rec-note[data-state='error'] { color: var(--alert); }
+
+/* ステージだけの表示でも録画中と分かるように、ステージの隅に点を出す。録画の範囲がステージだけのときは、この点は映らない（キャンバスの外なので） */
+#rec-dot { position: absolute; top: 12px; right: 12px; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85); }
+#rec-dot[hidden] { display: none; }
+@media (prefers-reduced-motion: no-preference) {
+  #rec-dot { animation: rec-blink 1.2s steps(2, start) infinite; }
+}
+@keyframes rec-blink { to { visibility: hidden; } }
+#hint .check { margin-top: 0; font-size: 12px; }
+
+/* ステージだけの表示。OBS のウィンドウキャプチャに、余白なしで載せる。 */
+body.stage-only { padding: 0; background: #000000; overflow: hidden; }
+body.stage-only #panel,
+body.stage-only #title,
+body.stage-only #hint { display: none; }
+body.stage-only #all { border: 0; max-width: none; background: #000000; }
+body.stage-only #stage { width: 100vw; height: 100vh; object-fit: contain; aspect-ratio: auto; }
+
+/* ---------- パネル ---------- */
+
+#panel {
+  flex: 0 1 420px;
+  max-width: 100%;
+  display: grid;
+  gap: 12px;
+}
+
+#panel section,
+#panel details {
+  background: var(--box);
+  border: 1px solid var(--border);
+  padding: 12px 14px;
+}
+
+h2 { margin: 0 0 6px; font-size: 14px; font-weight: bold; }
+.caption { margin: 0 0 8px; color: var(--muted); }
+.muted { color: var(--muted); }
+
+button,
+select {
+  padding: 5px 12px;
+  font: 13px var(--text);
+  border: 1px solid #9aa1ab;
+  background: #f3f4f6;
+  color: var(--ink);
+  cursor: pointer;
+}
+button:hover { background: #e7e9ed; }
+button:disabled { opacity: 0.5; cursor: default; }
+
+.facts { margin: 0; display: grid; gap: 3px; font-size: 13px; }
+.facts div { display: flex; justify-content: space-between; gap: 8px; }
+.facts dt { color: var(--muted); flex: none; }
+.facts dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.check { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 13px; }
+.row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; }
+.row input[type='range'] { flex: 1; min-width: 0; }
+.row select { flex: 1; min-width: 0; }
+
+/* ---------- 字幕 ---------- */
+
+#caption-lines {
+  list-style: none;
+  margin: 0;
+  padding: 8px 10px;
+  height: 9em;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 2px;
+  background: #1a1a1a;
+  color: #ffffff;
+  font-size: 15px;
+  line-height: 1.5;
+}
+#caption-lines li { opacity: 0.4; transition: opacity 0.3s; }
+#caption-lines li.used { opacity: 1; }
+#caption-lines li.interim { opacity: 0.75; color: #bbbbbb; font-style: italic; }
+#caption-lines li.empty { opacity: 0.5; font-size: 13px; }
+
+/* いまの判断のもとになった範囲。色だけに頼らず下線でも示す。 */
+#caption-lines .mark {
+  text-decoration: underline;
+  text-decoration-color: #ffe14d;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+#caption-lines li.interim .mark { color: #ffffff; font-style: normal; }
+
+#say-form,
+#telop-form { display: flex; gap: 6px; }
+#say-form { margin-top: 8px; }
+#telop-form { margin-top: 8px; }
+#say-form input,
+#telop-form input { flex: 1; min-width: 0; padding: 5px 8px; font: 14px var(--text); border: 1px solid #9aa1ab; }
+
+/* ---------- 判断の内訳 ---------- */
+
+/* 1 行で固定する行。長くても折り返さず、空でも高さを保つ。 */
+.line { margin: 6px 0 0; height: 1.7em; line-height: 1.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.alert { color: var(--alert); }
+
+.bars { display: grid; gap: 4px; }
+#mood-bars { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border); }
+
+.bar {
+  display: grid;
+  grid-template-columns: 6.5em 1fr 3em 6.2em;
+  align-items: center;
+  gap: 6px;
+  height: 20px;
+  font-size: 13px;
+}
+.bar .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar .track { height: 10px; background: var(--bar); overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--cue); transition: width 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); }
+#mood-bars .bar i { background: var(--mood); }
+.bar .pct { text-align: right; font-variant-numeric: tabular-nums; }
+.bar .raw { color: var(--muted); font: 11px ui-monospace, Menlo, monospace; white-space: nowrap; }
+.bar.idle { visibility: hidden; }
+
+/* ---------- 手動 ---------- */
+
+#chips { display: grid; gap: 6px; }
+.chip-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.chip-row > span { width: 3em; color: var(--muted); flex: none; }
+.chip { padding: 2px 9px; font-size: 12px; border-radius: 999px; }
+/* 点いているかどうかは色だけでなく、太字と枠でも示す */
+.chip[aria-pressed='true'] { background: var(--on); border-color: var(--on); color: #ffffff; font-weight: bold; }
+.chip.held { outline: 2px dashed var(--on); outline-offset: 1px; }
+
+.buttons { display: flex; flex-wrap: wrap; gap: 4px; }
+.buttons button { padding: 3px 8px; font-size: 12px; }
+
+.meter { flex: 1; height: 8px; background: var(--bar); overflow: hidden; }
+.meter i { display: block; height: 100%; width: 0; background: var(--on); }
+
+summary { cursor: pointer; font-size: 14px; font-weight: bold; }
+#seen {
+  margin: 8px 0 0;
+  max-height: 260px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font: 11px/1.5 ui-monospace, Menlo, monospace;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar i, #caption-lines li { transition: none; }
+}
